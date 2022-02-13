@@ -1,4 +1,4 @@
-module thenets/go-sentry-logger
+module github.com/thenets/go-sentry-logger
 
 go 1.16
 
