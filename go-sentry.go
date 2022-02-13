@@ -11,16 +11,6 @@ import (
 type GoSentry struct {
 }
 
-func NewSession(sentry_dsn string) (*GoSentry, error) {
-	s := &GoSentry{}
-	err := s.Init(sentry_dsn)
-	return s, err
-}
-
-func SetLevel(level logrus.Level) {
-	logrus.SetLevel(level)
-}
-
 func (s *GoSentry) Init(sentry_dsn string) error {
 	logrus.Debug("Initializing Sentry...")
 	logrus.Debug("Sentry DSN: " + sentry_dsn)
