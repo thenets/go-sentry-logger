@@ -1,6 +1,7 @@
 package gosentry
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -33,9 +34,10 @@ func (s *GoSentry) Init(sentry_dsn string) error {
 	return nil
 }
 
-func (s *GoSentry) GeneralLogger(in interface{}, level logrus.Level) {
+func (s *GoSentry) GeneralLogger(in interface{}, level logrus.Level, force_push_to_sentry bool) {
 	var e error
 	var msg string
+	push_to_sentry := false
 
 	// Extract the message from the interface
 	switch v := in.(type) {
@@ -44,47 +46,58 @@ func (s *GoSentry) GeneralLogger(in interface{}, level logrus.Level) {
 	case error:
 		msg = v.Error()
 	default:
-		msg = "SimpleSentry Panic: log only accepts 'string' or 'error' types"
-		logrus.Fatal(msg)
-		panic(msg)
+		fmt.Errorf("%v", e).Error()
 	}
 
 	// Switch on the log level
 	switch level {
 	case logrus.PanicLevel:
-		sentry.CaptureException(e)
+		defer logrus.Panic(msg)
+		push_to_sentry = true
 	case logrus.FatalLevel:
-		sentry.CaptureException(e)
+		defer logrus.Fatal(msg)
+		push_to_sentry = true
 	case logrus.ErrorLevel:
 		sentry.CaptureException(e)
+		logrus.Error(msg)
+		push_to_sentry = true
 	case logrus.WarnLevel:
-		sentry.CaptureMessage(msg)
+		logrus.Warn(msg)
 	case logrus.InfoLevel:
-		sentry.CaptureMessage(msg)
+		logrus.Info(msg)
 	case logrus.DebugLevel:
-		sentry.CaptureMessage(msg)
+		logrus.Debug(msg)
+	}
+
+	// Push the message to Sentry
+	if push_to_sentry || force_push_to_sentry {
+		var sentry_event_id *sentry.EventID
+		if e != nil {
+			sentry_event_id = sentry.CaptureException(e)
+		}
+		if msg != "" {
+			sentry_event_id = sentry.CaptureMessage(msg)
+		}
+		logrus.Debug("Sentry event ID: ", sentry_event_id)
+		defer sentry.Flush(2 * time.Second)
 	}
 }
 
 func (s *GoSentry) Panic(in interface{}) {
-	s.GeneralLogger(in, logrus.PanicLevel)
+	s.GeneralLogger(in, logrus.PanicLevel, false)
 }
 func (s *GoSentry) Fatal(in interface{}) {
-	s.GeneralLogger(in, logrus.FatalLevel)
-
+	s.GeneralLogger(in, logrus.FatalLevel, false)
 }
 func (s *GoSentry) Error(in interface{}) {
-	s.GeneralLogger(in, logrus.ErrorLevel)
-
+	s.GeneralLogger(in, logrus.ErrorLevel, false)
 }
 func (s *GoSentry) Warn(in interface{}) {
-	s.GeneralLogger(in, logrus.WarnLevel)
-
+	s.GeneralLogger(in, logrus.WarnLevel, false)
 }
 func (s *GoSentry) Info(in interface{}) {
-	s.GeneralLogger(in, logrus.InfoLevel)
-
+	s.GeneralLogger(in, logrus.InfoLevel, false)
 }
 func (s *GoSentry) Debug(in interface{}) {
-	s.GeneralLogger(in, logrus.DebugLevel)
+	s.GeneralLogger(in, logrus.DebugLevel, false)
 }

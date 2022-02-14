@@ -1,6 +1,9 @@
 package gosentry
 
-import logrus "github.com/sirupsen/logrus"
+import (
+	sentry "github.com/getsentry/sentry-go"
+	logrus "github.com/sirupsen/logrus"
+)
 
 var global_go_sentry *GoSentry
 
@@ -32,4 +35,12 @@ func Info(in interface{}) {
 }
 func Debug(in interface{}) {
 	global_go_sentry.Debug(in)
+}
+
+func CaptureMessage(msg string) {
+	global_go_sentry.GeneralLogger(msg, logrus.DebugLevel, true)
+}
+
+func CaptureException(err error) {
+	sentry.CaptureException(err)
 }
